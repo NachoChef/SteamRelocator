@@ -2,7 +2,7 @@ from winreg import ConnectRegistry, OpenKey, HKEY_CURRENT_USER, KEY_READ, QueryV
 import logging
 from steamfiles import *
 import os
-
+import time
 
 def setup():
     reg = ConnectRegistry(None, HKEY_CURRENT_USER)
@@ -26,20 +26,18 @@ def setup():
         sub_contents = []
         for f in os.listdir(''.join((d, '/SteamApps/'))):
             if 'app' in f:
-                sub_contents.append(ACF_Struct(''.join((d, '/SteamApps/', f))))
+                sub_contents.append(ACFStruct(''.join((d, '/SteamApps/', f))))
         lib_contents.append(sub_contents)
         logging.debug("library: ", d)
         logging.debug("contents: ", sub_contents)
 
-    return install_path, libraries, lib_contents
+    return install_path[0], libraries, lib_contents
 
-# for i in range(len(lib_contents)):
-#     for j in lib_contents[i]:
-#         print(j.get_param("name"))
-#         print(os.path.exists(''.join((libraries[i],'/SteamApps/common/', j.get_param("name")))))
+
 def list_dir(libs):
     for i in libs:
         print(i, end='\t')
+    #double return
     print('\n')
 
 
@@ -59,23 +57,48 @@ def view_dir(libraries, lib_contents):
     print('\n\n')
 
 
-def new_dir(install):
-    print("NEW_DIR")
-
+def new_dir(install, new_lib_path):
+    with VDFStruct(open(os.path.join((install, '/steamapps/libraryfolders.vdf')), 'r+')) as file:
+        file.new_lib(new_lib_path)
 
 def rm_dir(install):
     print("RM_DIR")
 
 
-def mov_dir(install):
-    print("MOV_DIR")
+def mov_dir(source_list: list, dest: str):
+    for source in source_list:
+        start = time.time()
+        size = os.stat(source).st_size
+        chunk_size = size // 10000   #optimal? or 4K
+        sz_per_seg = size // 40
+        try:
+            with open(source, 'rb') as infile:
+                with open(dest, 'wb') as outfile:
+                    copied = 0  # bytes
+                    chunk = infile.read(chunk_size)
+                    while chunk:
+                        outfile.write(chunk)
+                        copied += len(chunk)
+                        elapsed = time.time() - start
+                        time_per_byte = elapsed / float(copied)
+                        remaining = size - copied
+                        remaining_estimate = remaining * time_per_byte
+                        yield (copied // sz_per_seg), remaining_estimate
+                        # so it would yield number of progress bars to display, time remaining
+                        chunk = infile.read(chunk_size)
 
+        except IOError as err:
+            print('\nERROR: %s' % err)
+            sys.exit(1)
 
 def cls():
-    os.system('cls' if os.name=='nt' else 'clear')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-
+#prelim testing
 def main():
+
+    #This is all being replaced
+
     install_path, libraries, lib_contents = setup()
     switcher = {'0': lambda: sys.exit(),
                 '1': lambda: list_dir(libraries),
@@ -86,12 +109,12 @@ def main():
                 'clr': lambda: cls()}
 
     while True:
-        action = input('Type 0 to exit.\n' \
-                  'Type 1 to list current libraries.\n' \
-                  'Type 2 to see the contents of a library.\n' \
-                  'Type 3 to create a new library.\n' \
-                  'Type 4 to delete a library.\n' \
-                  'Type 5 to move a library.\n').strip()
+        action = input('Type 0 to exit.\n'
+                        'Type 1 to list current libraries.\n'
+                        'Type 2 to see the contents of a library.\n'
+                        'Type 3 to create a new library.\n'
+                        'Type 4 to delete a library.\n'
+                        'Type 5 to move a library.\n').strip()
         if action in switcher.keys():
             func = switcher[action]
             func()
