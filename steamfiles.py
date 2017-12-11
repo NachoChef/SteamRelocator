@@ -36,28 +36,31 @@ class ACFStruct():
 class VDFStruct():
     def __init__(self, filepath):
         with open(filepath, 'r+') as f:
-            self.lines = f.readlines()
-        self.filepath = filepath
+            self.__lines = f.readlines()
+        self.__filepath = filepath
 
     def new_lib(self, path):
         line = 4
-        for i in self.lines[4::]:
+        for i in self.__lines[4::]:
             if i == '}\n':
                 break
             line += 1
 
-        lib_nums = [[int(j) for j in re.findall(r'\t\"([0-9]*)\"', i)] for i in self.lines[4:line]]
+        lib_nums = [[int(j) for j in re.findall(r'\t\"([0-9]*)\"', i)] for i in self.__lines[4:line]]
         lib_nums = list(itertools.chain.from_iterable(lib_nums))
         new_num = max(lib_nums) + 1
-        self.lines.insert(line, ''.join(('\t', '"%d"\t\t"' % new_num, path, '"\n')))
+        self.__lines.insert(line, ''.join(('\t', '"%d"\t\t"' % new_num, path, '"\n')))
 
-        os.rename(os.path.join(self.filepath, '/steamapps/libraryfolders.vdf'),
-                  os.path.join(self.filepath, '/steamapps/libraryfolders_backup.vdf'))
+        os.rename(os.path.join(self.__filepath, '/steamapps/libraryfolders.vdf'),
+                  os.path.join(self.__filepath, '/steamapps/libraryfolders_backup.vdf'))
 
-        with open(os.path.join(self.filepath, '/steamapps/libraryfolders.vdf'), 'r+') as f:
+        with open(os.path.join(self.__filepath, '/steamapps/libraryfolders.vdf'), 'r+') as f:
             f.seek(0)
             f.truncate()
             f.seek(0)
-            f.writelines(self.lines)
+            f.writelines(self.__lines)
+
+    def remove_lib(self, lib_name):
+        pass
 
 #END VDFStruct

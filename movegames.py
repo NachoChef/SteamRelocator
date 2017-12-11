@@ -5,6 +5,7 @@ import os
 import time
 
 def setup():
+    # getting install loc from RegKey
     reg = ConnectRegistry(None, HKEY_CURRENT_USER)
     steam_key = OpenKey(reg, r'Software\Valve\Steam', 0, KEY_READ)
     install_path = QueryValueEx(steam_key, "SteamPath")
@@ -12,6 +13,7 @@ def setup():
     logging.debug("install path: ", install_path[0])
     libraries = []
 
+    # getting list of libraries 'known' by steam
     with open(''.join((install_path[0], '/steamapps/libraryfolders.vdf')), 'r+') as file:
         for line in file:
             libraries += re.findall(r'\"([A-Z]:.*?)\"', line)
@@ -37,13 +39,16 @@ def setup():
 def list_dir(libs):
     for i in libs:
         print(i, end='\t')
-    #double return
+    # double return
     print('\n')
 
 
 def view_dir(libraries, lib_contents):
+    """     Given a library input, will retrieve and print the games installed in this library      """
     num = -1
     lib = input("Enter the library path: ").strip()
+
+    # fix this logic :)
     for i in range(len(libraries)):
         if libraries[i] == lib:
             num = i
@@ -58,12 +63,13 @@ def view_dir(libraries, lib_contents):
 
 
 def new_dir(install, new_lib_path):
-    with VDFStruct(open(os.path.join((install, '/steamapps/libraryfolders.vdf')), 'r+')) as file:
+    """     Adds a new library via functions in the file handling library       """
+    with VDFStruct("".join([install, '/steamapps/libraryfolders.vdf'])) as file:
         file.new_lib(new_lib_path)
 
-def rm_dir(install):
-    print("RM_DIR")
-
+def rm_dir(install, dir_path):
+    with VDFStruct("".join([install, '/steamapps/libraryfolders.vdf'])) as file:
+        file.remove_lib(dir_path)
 
 def mov_dir(source_list: list, dest: str):
     for source in source_list:
@@ -91,9 +97,6 @@ def mov_dir(source_list: list, dest: str):
             print('\nERROR: %s' % err)
             sys.exit(1)
 
-def cls():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
 #prelim testing
 def main():
 
@@ -103,10 +106,9 @@ def main():
     switcher = {'0': lambda: sys.exit(),
                 '1': lambda: list_dir(libraries),
                 '2': lambda: view_dir(libraries, lib_contents),
-                '3': lambda: new_dir(install_path),
-                '4': lambda: rm_dir(install_path),
-                '5': lambda: mov_dir(install_path),
-                'clr': lambda: cls()}
+                '3': lambda: new_dir,
+                '4': lambda: rm_dir,
+                '5': lambda: mov_dir}
 
     while True:
         action = input('Type 0 to exit.\n'
